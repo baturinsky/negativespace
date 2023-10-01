@@ -1,9 +1,9 @@
 {
   type XY = [number, number];
 
-  const wall = 9,
+  const wall = 9, flipper = 5,
     neighbors = [[0, 1], [1, 0], [0, -1], [-1, 0]] as XY[],
-    sprites = { '_': ' ', '1': '+', '-1': '-', '0': ' ', [wall]: ' ' };
+    sprites = { '_': ' ', '1': '+', '-1': '-', [flipper]: '*', '0': ' ', [wall]: ' ' };
   let
     cursorAt: XY,
     history = [],
@@ -13,7 +13,9 @@
     seed = ~~(Math.random() * 1e9),
     turn = 1,
     lose = false,
-    wheelLevel = 4,
+    wheelLevel = 0,
+    flipMode = 1,
+    mouseAt: XY,
     draggingPoint: XY,
     draggedPattern: Grid,
     originalDraggedPattern: Grid,
@@ -28,7 +30,7 @@
     instructions =
       `______________Cargo hold
 ________________________    
-____________________Dock`;
+Dock____________________`;
 
   const rng = (n: number, pow?: number) => {
     seed = seed * 16807 % 2147483647;
@@ -50,8 +52,8 @@ ____________________Dock`;
       let bg = this.val == "X" ? "#f00" : highlighted ? `hsl(0 0% ${highlighted * 15}%)` : this.grid?.bgcolor(hl);
       if (y == 9)
         bg = "#000";
-      if([nextButton, gameOverButton].includes(this.grid) && highlighted<=2 && handWeight() == 0 && !draggedPattern)
-        bg  = "#0f0"
+      if ([nextButton, gameOverButton].includes(this.grid) && highlighted <= 2 && handWeight() == 0 && !draggedPattern)
+        bg = "#0f0"
 
       //if (!bg && this.val && this.grid == board)        bg = "#111";
       //return `<td id=${x}_${y} style="color:${this.pattern?.color || ''};background:${bg}">${this.val || '.'}</td>`
@@ -66,7 +68,7 @@ ____________________Dock`;
       this.val = Math.max(0, this.val - other.val);
     }
     add(other: Cell) {
-      this.val = this.val * 1 + other.val * 1;
+      this.val = this.val * 1 + (other.val==flipper?flipMode:other.val) * 1;
     }
   }
 
@@ -79,6 +81,7 @@ ____________________Dock`;
     at: XY = [0, 0];
     pattern: boolean;
     command: Function;
+    val: number;
 
     constructor(o?) {
       Object.assign(this, o);
@@ -95,13 +98,14 @@ ____________________Dock`;
       }
       return `hsl(${this.hue} 100% ${hl ? 20 : 10}%)`
     }
-    clone(value?, hue?: number) {
+    clone(val?, hue?: number) {
       let g = new Grid({ w: this.w, h: this.h })
       g.bits = [];
       g.hue = hue;
+      g.val = val;
       for (let i = 0; i < this.len; i++) {
         let c = this.geti(i).clone();
-        if (value && c.val) c.val = value;
+        if (val && c.val) c.val = val;
         c.grid = g;
         g.seti(i, c);
       }
@@ -211,7 +215,7 @@ ____________________Dock`;
     }
 
     canBePlaced(pattern: Grid, at: XY) {
-      return !this.apply(pattern, at, (me, them, meAt, themAt) => ![0, 1].includes(me.val + them.val), true);
+      return !this.apply(pattern, at, (me, them, meAt, themAt) => ![0, 1].includes(me.val + (them.val==flipper?flipMode:them.val)), true);
     }
 
 
@@ -278,7 +282,7 @@ ____________________Dock`;
   const board = new Grid({ w: 24, h: 8 }),
     handBoard = new Grid({ w: board.w, h: 7 }),
     delimiter = new Grid({ w: board.w, h: 3 });
-  let levels: { name: string, patterns: Grid[], walls: number, positive: number, negative: number }[];
+  let levels: { name: string, patterns: Grid[], walls: number, positive: number, negative: number, odd?: number }[];
 
   const overlap = (a, al, b, bl) => a + al > b && a < b + bl;
   const zeroCell = () => new Cell(0, null);
@@ -323,12 +327,11 @@ ____________________Dock`;
   const incremental = (n: number) => [...new Array(n)].map((_, i) => i)
   const arrayOf = (n: number, v) => [...new Array(n)].map(() => v)
   const handWeight = () => (handBoard.each(v => v.val ? 1 : 0) as number[]).reduce((partialSum, a) => partialSum + a, 0)
+  const sum = (a: XY, b: XY) => [a[0] + b[0], a[1] + b[1]] as XY
+  const sub = (a: XY, b: XY) => [a[0] - b[0], a[1] - b[1]] as XY
   const renderBoard = () => {
-    delimiter.insert(new Grid().fromString(`Leaving_${handWeight() + lost}t__`), [0, 0], true);
-    if (lose) {
-      delimiter.fill('_');
-      delimiter.insert(new Grid().fromString(`_Game_over_in_${turn}_turns`), [0, 1]);
-    }
+
+    delimiter.insert(new Grid().fromString(`Leaving_${handWeight() + lost}t__`), [6, 2], true);
 
     U.innerHTML = `<table>${incremental(board.h + delimiter.h + handBoard.h).map(y => [`<tr>`,
       ...incremental(board.w).map(x => {
@@ -336,7 +339,7 @@ ____________________Dock`;
         let s = screenAt([x, y]);
         if (d && s && s.grid != handBoard) {
           s = s.clone();
-          s.add(d);
+          s.val += d.val==flipper?flipMode:d.val;
           if (![0, 1].includes(s.val) || d?.grid == delimiter || (s.grid == delimiter))
             s.val = "X";
           return s.render([x, y], true)
@@ -350,8 +353,6 @@ ____________________Dock`;
       }
       ), `</tr>`]).flat().join('')}</table>`
   }
-  const sum = (a: XY, b: XY) => [a[0] + b[0], a[1] + b[1]] as XY
-  const sub = (a: XY, b: XY) => [a[0] - b[0], a[1] - b[1]] as XY
   const debounce = (callback, wait) => {
     let timeoutId = null;
     return (...args) => {
@@ -388,13 +389,12 @@ ____________________Dock`;
     return cell.val ? cell : null;
   }
   const deckCoord = (at) => [at[0], at[1] - board.h - delimiter.h] as XY
-  const givePatterns = (patterns: Grid[], n = 1, sign = 1) => {
+  const givePatterns = (patterns: Grid[], n = 1, val = 1) => {
     let count = 0;
     for (let i = 0; i < n; i++) {
       let ind = patterns.length - 1 - ~~(rng(patterns.length, 2))
       let pattern = patterns[ind]
       let where = handBoard.findWhereFits(pattern, true);
-      let val = sign;
       if (where) {
         let p = pattern.clone(val, where[0] * 30 + where[1] * 43 + patterns.length * 27);
         p.pattern = true;
@@ -409,10 +409,15 @@ ____________________Dock`;
       givePatterns(...args);
   }
 
-  const drawNextLevelButton = () =>{
+  const drawNextLevelButton = () => {
     let lastLevel = level == levels.length - 1;
-    delimiter.insert(new Grid({ w: 10, h: 1 }).fill(" "), [5, 2], true);
-    delimiter.insert(lastLevel ? gameOverButton : nextButton, [5, 2]);
+    delimiter.insert(new Grid({ w: 10, h: 1 }).fill(" "), [0, 0], true);
+    delimiter.insert(lastLevel ? gameOverButton : nextButton, [0, 0]);
+  }
+
+  const canBePlaced = () => {
+    let at = sub(mouseAt, draggingPoint);
+    return (board.hasInsideBorder(draggedPattern, at) && board.canBePlaced(draggedPattern, at));
   }
 
   const playLevel = (l: number) => {
@@ -429,10 +434,20 @@ ____________________Dock`;
     delimiter.insert(new Grid().fromString(`Planet ${level + 1}: ${data.name}`), [0, 1], true);
 
     hand = [];
+    history = [];
     handBoard.fill();
     board.placeWalls(data.walls || 0);
-    givePatterns(data.patterns, data.positive || 0, 1);
-    givePatterns(data.patterns, data.negative || 0, -1);
+    data.positive ||= 0;
+    data.negative ||= 0;
+    data.odd ||= 0;
+    for (let i = 0; i < Math.max(data.positive, data.negative, data.odd); i++) {
+      if (i < data.positive)
+        givePatterns(data.patterns, 1, 1);
+      if (i < data.negative)
+        givePatterns(data.patterns, 1, -1);
+      if (i < data.odd)
+        givePatterns(data.patterns, 1, flipper);
+    }
 
     drawNextLevelButton();
 
@@ -441,7 +456,7 @@ ____________________Dock`;
 
   const main = () => {
     delimiter.fromString(instructions);
-    delimiter.insert(undoButton, [0, 2]);
+    delimiter.insert(undoButton, [20, 2]);
 
     playLevel(0);
 
@@ -458,8 +473,20 @@ ____________________Dock`;
         }
         //console.log(gridUnderCursor.w);
         //if (gridUnderCursor != oldHighlight || draggedPattern && oldAt != cursorAt)
+
+        if (grid==board && draggedPattern && draggedPattern.val == flipper) {
+          if (!canBePlaced()) {
+            flipMode = -flipMode;
+            if(canBePlaced())
+              debugger;
+            else
+              flipMode = - flipMode;
+          }
+        }
+  
         debounce(renderBoard, 100)();
       }
+  
     }
 
     const drop = () => {
@@ -479,7 +506,7 @@ ____________________Dock`;
       if (!originalDraggedPattern)
         originalDraggedPattern = draggedPattern;
       let o = draggedPattern;
-      draggedPattern = new Grid({ w: o.h, h: o.w })
+      draggedPattern = new Grid({ w: o.h, h: o.w, val: o.val })
       o.each((v, at) => { draggedPattern.set(at.reverse() as XY, v) })
       draggingPoint = draggingPoint.reverse() as XY;
       renderBoard();
@@ -489,6 +516,7 @@ ____________________Dock`;
       if (lose)
         return;
       let [at, grid] = processTarget(e);
+      mouseAt = at;
       if (draggedPattern) {
         if (grid == handBoard) {
           at = sub(deckCoord(at), draggingPoint);
@@ -497,8 +525,8 @@ ____________________Dock`;
             draggedPattern = null;
           }
         } else if (grid == board) {
-          at = sub(at, draggingPoint);
-          if (board.hasInsideBorder(draggedPattern, at) && board.canBePlaced(draggedPattern, at)) {
+          if (canBePlaced()) {
+            let at = sub(mouseAt, draggingPoint);
             let p = draggedPattern;
             draggedPattern = null;
             board.place(p, at);
@@ -690,17 +718,36 @@ ____________________Dock`;
 ###
 ###
 ###
+`,
+    `
+####
+####
 `
+    ,
+    `
+##
+##
+##
+##
+`
+    ,
+    `
+####
+####
+####
+####
+`
+
   ].map(r => new Grid().fromString(r));
 
   levels = [
-    { name: "Load the boxes", patterns: boxpatterns, walls: 16, positive: 6, negative: 0 },
-    { name: `"+" + "-"==" "`, patterns: boxpatterns, walls: 16, positive: 4, negative: 4 },
-    { name: "Hold extended", patterns: allpatterns.slice(0, 12), walls: 8, positive: 8, negative: 4 },
-    { name: "L's", patterns: lpatterns, walls: 8, positive: 8, negative: 8 },
-    { name: "WHEEL is fixed", patterns: allpatterns.slice(0, 12), walls: 8, positive: 8, negative: 8 },
-    { name: "A bigger boat", patterns: allpatterns.slice(0, 12), walls: 0, positive: 12, negative: 12 },
-    { name: "Bigger boxes", patterns: allpatterns, walls: 0, positive: 12, negative: 12 },
+    { name: "Load the boxes", patterns: boxpatterns.slice(1, 5), walls: 16, positive: 6, negative: 0 },
+    { name: `"+" + "-"==" "`, patterns: boxpatterns, walls: 16, positive: 4, negative: 2 },
+    { name: "Hold extended", patterns: allpatterns.slice(0, 12), walls: 8, positive: 12, negative: 4 },
+    { name: "L's", patterns: lpatterns, walls: 8, positive: 12, negative: 12 },
+    { name: "WHEEL is fixed", patterns: allpatterns.slice(0, 12), walls: 8, positive: 12, negative: 12 },
+    { name: "A bigger boat", patterns: allpatterns.slice(0, 12), walls: 0, positive: 24, negative: 8 },
+    { name: "Bigger boxes", patterns: allpatterns, walls: 0, positive: 16, negative: 16 },
   ]
 
   main();
