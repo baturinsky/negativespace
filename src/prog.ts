@@ -30,7 +30,7 @@
     level = 0,
     lost = 0,
     instructions =
-      `______________Cargo hold
+      `___________________Cargo
 ________________________    
 Dock____________________`;
 
@@ -353,9 +353,9 @@ Dock____________________`;
     delimiter.insert(new Grid().fromString(`Leaving_${handWeight() + lost}t__`), [6, 2], true);
 
     if (flipsLeft > 0)
-      delimiter.insert(flipButton, [9, 0]);
+      delimiter.insert(flipButton, [11, 0]);
     else
-      delimiter.insert(new Grid().fromString("____"), [9, 0]);
+      delimiter.insert(new Grid().fromString("____"), [11, 0]);
 
     U.innerHTML = `<table>${incremental(board.h + delimiter.h + handBoard.h).map(y => [`<tr>`,
       ...incremental(board.w).map(x => {

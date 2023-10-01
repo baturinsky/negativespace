@@ -1,6 +1,6 @@
 {
   const wall = 9, flipper = 5, neighbors = [[0, 1], [1, 0], [0, -1], [-1, 0]], sprites = { "_": " ", "1": "+", "-1": "-", [flipper]: "*", "0": " ", [wall]: " " };
-  let cursorAt, history = [], hand = [], neighborsplus = [[0, 0], ...neighbors], rawPatterns, seed = ~~(Math.random() * 1e9), turn = 1, lose = false, wheelLevel = 4, flipLevel = 6, flipMode = 1, flipsLeft = 1, mouseAt, draggingPoint, draggedPattern, originalDraggedPattern, gridUnderCursor, patterns, allpatterns, boxpatterns, lpatterns, maxPatterns = 10, level = 0, lost = 0, instructions = `______________Cargo hold
+  let cursorAt, history = [], hand = [], neighborsplus = [[0, 0], ...neighbors], rawPatterns, seed = ~~(Math.random() * 1e9), turn = 1, lose = false, wheelLevel = 4, flipLevel = 6, flipMode = 1, flipsLeft = 1, mouseAt, draggingPoint, draggedPattern, originalDraggedPattern, gridUnderCursor, patterns, allpatterns, boxpatterns, lpatterns, maxPatterns = 10, level = 0, lost = 0, instructions = `___________________Cargo
 ________________________    
 Dock____________________`;
   const rng = (n, pow) => {
@@ -281,9 +281,9 @@ Dock____________________`;
   const renderBoard = () => {
     delimiter.insert(new Grid().fromString(`Leaving_${handWeight() + lost}t__`), [6, 2], true);
     if (flipsLeft > 0)
-      delimiter.insert(flipButton, [9, 0]);
+      delimiter.insert(flipButton, [11, 0]);
     else
-      delimiter.insert(new Grid().fromString("____"), [9, 0]);
+      delimiter.insert(new Grid().fromString("____"), [11, 0]);
     U.innerHTML = `<table>${incremental(board.h + delimiter.h + handBoard.h).map((y) => [
       `<tr>`,
       ...incremental(board.w).map((x) => {
