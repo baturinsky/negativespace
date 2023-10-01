@@ -482,9 +482,6 @@ Dock____________________`;
   };
   allpatterns = [
     `
-#
-`,
-    `
 ##
 `,
     `
@@ -586,13 +583,6 @@ Dock____________________`;
   ].map((r) => new Grid().fromString(r));
   lpatterns = [
     `
-##
-`,
-    `
-#
-#
-`,
-    `
 ###
 `,
     `
@@ -663,11 +653,11 @@ Dock____________________`;
     { name: "Load the boxes", patterns: boxpatterns.slice(1, 5), walls: 16, positive: 6, negative: 0 },
     { name: `"+" + "-"==" "`, patterns: boxpatterns, walls: 16, positive: 4, negative: 2 },
     { name: "Hold extended", patterns: allpatterns.slice(0, 12), walls: 8, positive: 12, negative: 4 },
-    { name: "L's", patterns: lpatterns, walls: 8, positive: 12, negative: 12 },
+    { name: "L's", patterns: lpatterns, walls: 8, positive: 10, negative: 6 },
     { name: "WHEEL is fixed", patterns: allpatterns.slice(0, 12), walls: 8, positive: 12, negative: 12 },
-    { name: "A bigger boat", patterns: allpatterns.slice(0, 12), walls: 0, positive: 24, negative: 8 },
-    { name: "Do The Flip", patterns: allpatterns.slice(0, 12), walls: 0, positive: 16, negative: 16 },
-    { name: "Bigger boxes", patterns: allpatterns, walls: 0, positive: 16, negative: 16 }
+    { name: "A bigger boat", patterns: allpatterns, walls: 0, positive: 24, negative: 8 },
+    { name: "Do The Flip", patterns: allpatterns, walls: 0, positive: 12, negative: 12 },
+    { name: "Final level", patterns: allpatterns, walls: 0, positive: 16, negative: 16 }
   ];
   main();
 }
