@@ -1,6 +1,6 @@
 {
   const wall = 9, flipper = 5, neighbors = [[0, 1], [1, 0], [0, -1], [-1, 0]], sprites = { "_": " ", "1": "+", "-1": "-", [flipper]: "*", "0": " ", [wall]: " " };
-  let cursorAt, history = [], hand = [], neighborsplus = [[0, 0], ...neighbors], rawPatterns, seed = ~~(Math.random() * 1e9), turn = 1, lose = false, wheelLevel = 0, flipMode = 1, mouseAt, draggingPoint, draggedPattern, originalDraggedPattern, gridUnderCursor, patterns, allpatterns, boxpatterns, lpatterns, maxPatterns = 10, level = 0, lost = 0, instructions = `______________Cargo hold
+  let cursorAt, history = [], hand = [], neighborsplus = [[0, 0], ...neighbors], rawPatterns, seed = ~~(Math.random() * 1e9), turn = 1, lose = false, wheelLevel = 4, flipLevel = 6, flipMode = 1, flipsLeft = 1, mouseAt, draggingPoint, draggedPattern, originalDraggedPattern, gridUnderCursor, patterns, allpatterns, boxpatterns, lpatterns, maxPatterns = 10, level = 0, lost = 0, instructions = `______________Cargo hold
 ________________________    
 Dock____________________`;
   const rng = (n, pow) => {
@@ -230,7 +230,7 @@ Dock____________________`;
   const nullCell = () => new Cell(null, null);
   const saveState = () => {
     let bs = board.save();
-    history.push({ board: bs, hand: [...hand] });
+    history.push({ board: bs, hand: [...hand], flipsLeft });
   };
   const loadState = () => {
     draggedPattern = null;
@@ -238,6 +238,7 @@ Dock____________________`;
       return;
     let state = history.pop();
     board.load(state.board);
+    flipsLeft = state.flipsLeft;
     hand = [];
     handBoard.fill();
     for (let p of state.hand) {
@@ -249,11 +250,25 @@ Dock____________________`;
     let nextLevel2 = (level + 1) % levels.length;
     playLevel(nextLevel2);
   };
+  const doTheFlip = () => {
+    if (!(flipsLeft > 0))
+      return;
+    saveState();
+    flipsLeft--;
+    board.each((v, at) => {
+      if (v.val == 1)
+        v.val = 0;
+      else if (v.val == 0)
+        v.val = 1;
+    });
+  };
   const undoButton = new Grid({
     command: () => {
       loadState();
     }
-  }).fromString(`Undo`), nextButton = new Grid({
+  }).fromString(`Undo`), flipButton = new Grid({
+    command: doTheFlip
+  }).fromString(`Flip`), nextButton = new Grid({
     command: nextLevel
   }).fromString(`Take_off`), gameOverButton = new Grid({
     command: nextLevel
@@ -265,6 +280,10 @@ Dock____________________`;
   const sub = (a, b) => [a[0] - b[0], a[1] - b[1]];
   const renderBoard = () => {
     delimiter.insert(new Grid().fromString(`Leaving_${handWeight() + lost}t__`), [6, 2], true);
+    if (flipsLeft > 0)
+      delimiter.insert(flipButton, [9, 0]);
+    else
+      delimiter.insert(new Grid().fromString("____"), [9, 0]);
     U.innerHTML = `<table>${incremental(board.h + delimiter.h + handBoard.h).map((y) => [
       `<tr>`,
       ...incremental(board.w).map((x) => {
@@ -359,6 +378,7 @@ Dock____________________`;
     } else {
       lost += handWeight();
     }
+    flipsLeft = level < flipLevel ? 0 : 1;
     delimiter.insert(new Grid({ w: 24, h: 1 }).fill(" "), [0, 1], true);
     delimiter.insert(new Grid().fromString(`Planet ${level + 1}: ${data.name}`), [0, 1], true);
     hand = [];
@@ -646,6 +666,7 @@ Dock____________________`;
     { name: "L's", patterns: lpatterns, walls: 8, positive: 12, negative: 12 },
     { name: "WHEEL is fixed", patterns: allpatterns.slice(0, 12), walls: 8, positive: 12, negative: 12 },
     { name: "A bigger boat", patterns: allpatterns.slice(0, 12), walls: 0, positive: 24, negative: 8 },
+    { name: "Do The Flip", patterns: allpatterns.slice(0, 12), walls: 0, positive: 16, negative: 16 },
     { name: "Bigger boxes", patterns: allpatterns, walls: 0, positive: 16, negative: 16 }
   ];
   main();
